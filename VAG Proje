@@ -1,1 +1,283 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+import numpy as np 
+import pandas as pd 
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler, normalize
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+warnings.filterwarnings('ignore')
+
+
+sns.set_style('darkgrid')
+
+
+# In[2]:
+
+
+df= pd.read_csv('CC GENERAL.csv')
+df.head()
+
+
+# In[3]:
+
+
+df.info()
+
+
+# In[4]:
+
+
+#Cust_ID is one column which we will not be needing for model building, so lets drop it:
+df.drop('CUST_ID', axis=1, inplace=True)
+
+
+# In[5]:
+
+
+#Missing Values
+df.isna().sum()
+
+
+# In[6]:
+
+
+df.dropna(subset= ['CREDIT_LIMIT'], inplace=True)
+
+
+# In[7]:
+
+
+df.isna().sum()
+
+
+# In[8]:
+
+
+df.info()
+
+
+# In[9]:
+
+
+df['MINIMUM_PAYMENTS'].fillna(df['MINIMUM_PAYMENTS'].median(), inplace=True)
+
+
+# In[11]:
+
+
+df.isna().sum()
+
+
+# In[12]:
+
+
+#Data Visualization
+
+
+# In[13]:
+
+
+for col in df.columns:
+    plt.figure(figsize = (30,5))
+    sns.distplot(df[col])
+    plt.show()
+
+
+# In[14]:
+
+
+df
+
+
+# In[15]:
+
+
+#Plotting correlation heatmap to see if there are many correlated features
+
+
+# In[17]:
+
+
+plt.figure(figsize=(12,12))
+sns.heatmap(df.corr(), annot=True, cmap='coolwarm') 
+
+
+# In[19]:
+
+
+#elbow
+# Standardize data
+scaler = StandardScaler() 
+scaled_df = scaler.fit_transform(df) 
+  
+# Normalizing the Data 
+normalized_df = normalize(scaled_df) 
+  
+# Converting the numpy array into a pandas DataFrame 
+normalized_df = pd.DataFrame(normalized_df) 
+  
+# Reducing the dimensions of the data 
+pca = PCA(n_components = 2) 
+X_principal = pca.fit_transform(normalized_df) 
+X_principal = pd.DataFrame(X_principal) 
+X_principal.columns = ['P1', 'P2'] 
+  
+X_principal.head(10)
+
+
+# In[27]:
+
+
+sse = {}
+for k in range(1, 10):
+    kmeans = KMeans(n_clusters=k, max_iter=1000).fit(X_principal)
+    sse[k] = kmeans.inertia_ # Inertia: Sum of distances of samples to their closest cluster center
+plt.figure(figsize = (14,7))
+plt.plot(list(sse.keys()), list(sse.values()))
+plt.xlabel("Number of cluster")
+plt.ylabel("SSE")
+plt.legend()
+plt.grid(b = True, linestyle = '-', which = 'major', color = 'pink')
+plt.show()
+
+
+# In[28]:
+
+
+#Dimensionality Reduction
+
+
+# In[30]:
+
+
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
+ss= StandardScaler()
+df= ss.fit_transform(df)
+
+pca= PCA()
+pca.fit(df)
+
+
+# In[32]:
+
+
+df
+
+
+# In[33]:
+
+
+plt.plot(pca.explained_variance_ratio_.cumsum())
+
+
+# In[34]:
+
+
+pca= PCA(n_components=6)
+X= pca.fit_transform(df)
+
+
+# In[35]:
+
+
+#KMeans Clustering
+
+
+# In[36]:
+
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+plt.figure(figsize=(15,10))
+distortions=[]
+sil_scores=[]
+for i in range(2,30):
+    kmeans= KMeans(n_clusters=i, n_init=10, init= 'k-means++', algorithm='full', max_iter=300)
+    kmeans.fit(X)
+    distortions.append(kmeans.inertia_)
+    label= kmeans.labels_
+    sil_scores.append(silhouette_score(X, label))
+plt.plot(np.arange(2,30,1), distortions, alpha=0.5)
+plt.plot(np.arange(2,30,1), distortions,'o' ,alpha=0.5)
+plt.show()
+
+
+# In[37]:
+
+
+plt.figure(figsize=(15,10))
+plt.plot(np.arange(2,30,1), sil_scores)
+plt.show()
+
+
+# In[38]:
+
+
+#5 looks like the right number of clusters for this problem
+
+
+# In[39]:
+
+
+df
+
+
+# In[40]:
+
+
+kmeans= KMeans(n_clusters=5, n_init=10, init= 'k-means++', algorithm='full', max_iter=300)
+kmeans.fit(X)
+labels= kmeans.labels_
+
+
+# In[41]:
+
+
+df
+
+
+# In[42]:
+
+
+#We use PCA again so that we can reduce the data to 2 components, in order to visualize our clusters better
+
+
+# In[43]:
+
+
+pca= PCA(n_components=2)
+X2= pca.fit_transform(df)
+
+
+# In[44]:
+
+
+pca_df = pd.DataFrame(data=X2, columns=['pca1','pca2'])
+pca_df['labels']= labels
+pca_df.head()
+
+
+# In[46]:
+
+
+plt.figure(figsize=(10,10))
+ax = sns.scatterplot(x='pca1', y='pca2', hue='labels', data=pca_df, palette='spring')
+
+
+# In[69]:
+
+
+#We can group them using 5 clusters.
+
 
